@@ -43,7 +43,27 @@
 	          <ul class="list-inline list-unstyled">
 	  			<li><span><i class="glyphicon glyphicon-calendar"></i> {{ post.date | date : 'dd/MM/yyyy : HH:mm' }} </span></li>
 	  			<li ng-show="tmlCtrl.pseudo == post.author"><button type="button" ng-click="tmlCtrl.deletePost(post)" class="btn btn-danger">Delete Post</button></li>
+	  			<li><a class="btn btn-primary glyphicon glyphicon-thumbs-up" ng-click="tmlCtrl.likePost(post)">Like</a></li>
+	  			<li><a style="background: #000;color: #FFF;" class="btn glyphicon glyphicon-thumbs-down" ng-click="tmlCtrl.dislikePost(post)">Dislike</a></li>
 			  </ul>
+	       </div>
+
+	  	   <div ng-show="post.like > 0">
+	       		<h6 ng-show="post.like == 1">{{ post.like }} likes this post</h6>
+	       		<h6 ng-show="post.like > 1">{{ post.like }} like this post</h6>
+	       		People who like this:
+	       		<ul>
+	       			<li ng-repeat="liker in post.likers">{{ liker }} <a ng-show="liker === tmlCtrl.pseudo" class="btn btn-info glyphicon glyphicon-remove" ng-click="tmlCtrl.removeThinking('like', post)">Remove like</a></li>
+	       		</ul>
+	       </div>
+
+	       <div ng-show="post.dislike > 0">
+	       		<h6 ng-show="post.dislike == 1">{{ post.dislike }} dislikes this post</h6>
+	       		<h6 ng-show="post.dislike > 1">{{ post.dislike }} dislike this post</h6>
+	       		People who dislike this:
+	       		<ul>
+	       			<li ng-repeat="disliker in post.dislikers">{{ disliker }} <a ng-show="disliker === tmlCtrl.pseudo" class="btn btn-info glyphicon glyphicon-remove" ng-click="tmlCtrl.removeThinking('dislike', post)">Remove Dislike</a></li>
+	       		</ul>
 	       </div>
 		</div>
 		
@@ -85,6 +105,9 @@
 			   				publicationText: tml.publicationText,
 			   				date: new Date(),
 			   				like: 0,
+			   				likers: [],
+			   				dislike: 0,
+			   				dislikers: []
 			   			}
 
 			   			tml.posts.push(post);
@@ -99,6 +122,71 @@
 						var index = tml.posts.indexOf(post);
   						tml.posts.splice(index, 1);     
 			   		};
+
+			   		tml.likePost = function(post) {
+
+			   			var likeSent = {
+			   				postId: post.id,
+			   				likerPseudo: tml.pseudo
+			   			}
+
+
+			   			if (post.dislikers.includes(tml.pseudo)) {
+				    		var pseudoIndex = post.dislikers.indexOf(tml.pseudo);
+				    		post.dislikers.splice(pseudoIndex);
+				    		post.dislike = post.dislike - 1;
+				    	}
+
+				    	if (!post.likers.includes(tml.pseudo)) {
+				    		post.like = post.like + 1;
+				   			post.likers.push(tml.pseudo);
+
+				   			tml.socket.emit('sendLike', likeSent)
+				    	}
+			   		};
+
+			   		tml.dislikePost = function(post) {
+
+			   			var dislikeSent = {
+			   				postId: post.id,
+			   				dislikerPseudo: tml.pseudo
+			   			}
+
+			   			if (post.likers.includes(tml.pseudo)) {
+				    		var pseudoIndex = post.likers.indexOf(tml.pseudo);
+				    		post.likers.splice(pseudoIndex);
+				    		post.like = post.like - 1;
+				    	}
+
+				    	if (!post.dislikers.includes(tml.pseudo)) {
+							post.dislike = post.dislike + 1;
+				   			post.dislikers.push(tml.pseudo);
+
+				   			tml.socket.emit('sendDislike', dislikeSent)
+				    	}
+
+			   		};
+
+			   		tml.removeThinking = function (option, post) {
+
+			   			if (option === "dislike") {
+			   				var pseudoIndex = post.dislikers.indexOf(tml.pseudo);
+				    		post.dislikers.splice(pseudoIndex);
+				    		post.dislike = post.dislike - 1;
+			   			} else {
+			   				var pseudoIndex = post.likers.indexOf(tml.pseudo);
+				    		post.likers.splice(pseudoIndex);
+				    		post.like = post.like - 1;
+			   			}
+
+			   			var thinking = {
+			   				option: option,
+			   				pseudo: tml.pseudo,
+			   				postId: post.id
+			   			};
+
+			   			tml.socket.emit('removeThinking', thinking)
+			   		}
 
 			   		function randId() {
      					return Math.random().toString(36).substr(2, 10);

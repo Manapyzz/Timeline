@@ -32,22 +32,69 @@ io.on('connection', socket => {
         socket.broadcast.emit('sendPostList', postList);
     });
 
+    socket.on('sendLike', (sentLike) => {
+    	var index = postList.map(function(post) {return post.id; }).indexOf(sentLike.postId);
+
+    	post = postList[index];
+
+    	if (post.dislikers.includes(sentLike.likerPseudo)) {
+    		var pseudoIndex = post.dislikers.indexOf(sentLike.likerPseudo);
+    		post.dislikers.splice(pseudoIndex);
+    		post.dislike = post.dislike - 1;
+    	}
+
+    	post.like = post.like + 1;
+    	post.likers.push(sentLike.likerPseudo);
+
+    	postList[index] = post;
+
+    	socket.broadcast.emit('sendPostList', postList);
+    });
+
+    socket.on('sendDislike', (sentDislike) => {
+    	var index = postList.map(function(post) {return post.id; }).indexOf(sentDislike.postId);
+
+    	post = postList[index];
+
+    	if (post.likers.includes(sentDislike.dislikerPseudo)) {
+    		var pseudoIndex = post.likers.indexOf(sentDislike.dislikerPseudo);
+    		post.likers.splice(pseudoIndex);
+    		post.like = post.like - 1;
+    	}
+
+    	post.dislike = post.dislike + 1;
+    	post.dislikers.push(sentDislike.dislikerPseudo);
+
+    	postList[index] = post;
+
+    	socket.broadcast.emit('sendPostList', postList);
+    });
+
+    socket.on('removeThinking', (thinking) => {
+
+    	var index = postList.map(function(post) {return post.id; }).indexOf(thinking.postId);
+
+    	post = postList[index];
+
+    	if (thinking.option === "dislike") {
+			var pseudoIndex = post.dislikers.indexOf(thinking.pseudo);
+			post.dislikers.splice(pseudoIndex);
+			post.dislike = post.dislike - 1;
+		} else {
+			var pseudoIndex = post.likers.indexOf(thinking.pseudo);
+			post.likers.splice(pseudoIndex);
+			post.like = post.like - 1;
+		}
+
+    	postList[index] = post;
+
+    	socket.broadcast.emit('sendPostList', postList);
+    });
+
     socket.on('disconnect', function() {
         console.log('Bye');
     });
-
 });
-
-function containsObject(obj, list) {
-    var i;
-    for (i = 0; i < list.length; i++) {
-        if (list[i] === obj) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 const port = process.env.PORT || 8000;
 server.listen(port, () => console.log(`Server is listening on port ${port}`));
