@@ -32,7 +32,7 @@
             </form>
 		</div>
 
-		<div ng-repeat="post in tmlCtrl.posts" class="media">
+		<div ng-repeat="post in tmlCtrl.posts.reverse()" class="media">
 			<a class="pull-left" href="#">
     			<img class="media-object" ng-src="{{ post.imgUrl }}">
   			</a>
@@ -85,7 +85,6 @@
 			   			tml.socket = io('ws://localhost:8000');	
 
 			   			tml.socket.on('sendPostList', function(postList) {
-			   				console.log(postList);
 	                        tml.posts = postList;
 	                        $scope.$apply();
                     	});
