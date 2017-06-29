@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Timeline</title>
+	<link rel="stylesheet" href="/node_modules/bootstrap/dist/css/bootstrap.css">
+	<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css"/>
+    <script src="/node_modules/angular/angular.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body ng-app="TimelineApp" ng-controller="TimelineController as tmlCtrl">
+
+	<div class="container">
+
+		<div ng-hide="tmlCtrl.isUserLogIn">
+			<h1>Hello Timeline</h1>
+			<h3>Please enter your pseudo to join the timeline !</h3>
+			<form class="form-inline" name="loginForm" ng-submit="tmlCtrl.logUser()">
+	            <input type="text" class="form-control" placeholder="Enter your name..." required ng-model="tmlCtrl.pseudo">
+	            <input type="submit" class="btn btn-primary" value="Join Timeline">
+	        </form>			
+		</div>
+
+		<div ng-show="tmlCtrl.isUserLogIn">
+			<h3>Post something:</h3>
+			<form class="form-inline" id="postForm" name="messageForm" ng-submit="tmlCtrl.postPublication()">
+                <!-- <p><em>(Connecté en tant que <strong>{{ chat.pseudo }}</strong>)</em></p> -->
+                <label for="imgUrl">Img URL</label>
+                <input type="text" class="form-control" placeholder="http://" id="imgUrl" ng-model="tmlCtrl.imgUrl" required>
+				<textarea class="form-control" name="publicationText" rows="5" form="postForm" ng-model="tmlCtrl.publicationText"></textarea>
+                <input type="submit" class="btn btn-primary" value="Post publication">
+            </form>
+		</div>
+
+		<div ng-repeat="post in tmlCtrl.posts" class="media">
+			<a class="pull-left" href="#">
+    			<img class="media-object" ng-src="{{ post.imgUrl }}">
+  			</a>
+  			<div class="media-body">
+	    	  <h4 class="media-heading">Par {{ post.author }}</h4>
+	          <!-- <p class="text-right">By Anailuj</p> -->
+	          <p>{{ post.publicationText }}</p>
+	          <ul class="list-inline list-unstyled">
+	  			<li><span><i class="glyphicon glyphicon-calendar"></i> {{ post.date | date : 'dd/MM/yyyy : HH:mm' }} </span></li>
+	  			<li ng-show="tmlCtrl.pseudo == post.author"><button type="button" ng-click="tmlCtrl.deletePost(post)" class="btn btn-danger">Delete Post</button></li>
+			  </ul>
+	       </div>
+		</div>
+		
+	</div>
+
+	<script type="text/javascript">
+		angular.module('TimelineApp', [])
+			   .controller('TimelineController', function($scope) {
+			   		var tml = this;
+
+			   		tml.isUserLogIn = false;
+			   		tml.pseudo = "";
+			   		tml.imgUrl = "";
+			   		tml.publicationText = "";
+			   		tml.posts = [];
+
+			   		tml.logUser = function() {
+			   			tml.isUserLogIn = true;
+			   			tml.socket = io('ws://localhost:8000');	
+
+			   			tml.socket.on('sendPostList', function(postList) {
+			   				console.log(postList);
+	                        tml.posts = postList;
+	                        $scope.$apply();
+                    	});
+
+			   			tml.socket.on('post', (post) => {
+	                        tml.posts.push(post);
+	                        $scope.$apply();
+                    	});
+			   		};
+
+			   		tml.postPublication = function() {
+
+			   			var post = {
+			   				id: randId(),
+			   				author: tml.pseudo,
+			   				imgUrl: tml.imgUrl,
+			   				publicationText: tml.publicationText,
+			   				date: new Date(),
+			   				like: 0,
+			   			}
+
+			   			tml.posts.push(post);
+
+			   			tml.socket.emit('post', post);
+			   		};
+
+			   		tml.deletePost = function(post) {
+					
+						tml.socket.emit('deletePost', post);
+
+						var index = tml.posts.indexOf(post);
+  						tml.posts.splice(index, 1);     
+			   		};
+
+			   		function randId() {
+     					return Math.random().toString(36).substr(2, 10);
+					}
+			   });
+	</script>
+</body>
+</html>
